@@ -1,5 +1,7 @@
+# Main.py
+
 import numpy as np
-from primal_dual import primal_dual_interior_point
+from primal_dual import primal_dual_interior_point, find_initial_point_cvxpy, find_initial_point_robust
 from scipy.optimize import linprog
 import time
 import matplotlib.pyplot as plt
@@ -23,15 +25,23 @@ def generate_random_lp(m, n):
     
     return A, b, c
 
-def compare_with_simplex(A, b, c):
+def compare_with_simplex(A, b, c, use_cvxpy=True):
     """
     Compara el algoritmo primal-dual con el método Simplex.
     """
     print("\n--- Comparación del Algoritmo Primal-Dual con Simplex ---")
 
+    # Elegir el método de punto inicial
+    if use_cvxpy:
+        print("Usando find_initial_point_cvxpy...")
+        find_initial_point = find_initial_point_cvxpy
+    else:
+        print("Usando find_initial_point_robust...")
+        find_initial_point = find_initial_point_robust
+
     # Algoritmo Primal-Dual
     start_time = time.time()
-    x_pd, lam_pd, s_pd, history = primal_dual_interior_point(A, b, c)
+    x_pd, lam_pd, s_pd, history = primal_dual_interior_point(A, b, c, find_initial_point=find_initial_point)
     primal_dual_time = time.time() - start_time
     print(f"Tiempo de ejecución (Primal-Dual): {primal_dual_time:.3f} segundos")
 
@@ -54,7 +64,22 @@ def compare_with_simplex(A, b, c):
     plt.legend()
     plt.show()
 
+def generate_test_problem():
+    A = np.array([
+        [1, 1, 0],
+        [0, 1, 1],
+        [1, 0, 1]
+    ])
+    b = np.array([2, 2, 2])
+    c = np.array([1, 2, 3])
+    return A, b, c
+
+
 if __name__ == "__main__":
     # Generar un problema aleatorio pequeño para probar
-    A, b, c = generate_random_lp(7, 10)
-    compare_with_simplex(A, b, c)
+    # A, b, c = generate_random_lp(7, 10)
+    A, b, c = generate_test_problem()
+    compare_with_simplex(A, b, c, use_cvxpy=False)
+
+
+

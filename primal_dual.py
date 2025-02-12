@@ -1,41 +1,68 @@
+# primal_dual.py
+
 import numpy as np
 from numerical_utils import solve_newton_system, backtracking_line_search
 
-def find_initial_point(A, b, c):
+import numpy as np
+from scipy.optimize import linprog
+
+# Opción 1: Generación de punto inicial usando cvxpy
+def find_initial_point_cvxpy(A, b, c):
+    import cvxpy as cp
     m, n = A.shape
-    
-    # Problema de Fase I: min 1*t sujeto a A x + t = b, x >= 0, t >= 0
+
+    # Definición de variables
+    x = cp.Variable(n)
+    s = cp.Variable(n)
+
+    # Restricciones para asegurar x > 0, s > 0
+    constraints = [A @ x == b, x >= 1e-6, s >= 1e-6]
+    objective = cp.Minimize(cp.sum(s))  # Minimizar suma de holguras
+
+    # Resolver el problema
+    prob = cp.Problem(objective, constraints)
+    prob.solve()
+
+    if prob.status != cp.OPTIMAL:
+        raise ValueError("Fase I (cvxpy) falló. El problema puede ser no factible.")
+
+    # Generar punto inicial factible
+    lam = np.random.rand(m)
+    s = np.maximum(c - A.T @ lam, 1e-6)  # Holguras duales iniciales positivas
+
+    return x.value, lam, s
+
+# Opción 2: Generación de punto inicial sin cvxpy
+def find_initial_point_robust(A, b, c):
+    m, n = A.shape
+
+    # Fase I para encontrar un punto factible
     A_aug = np.hstack([A, np.ones((m, 1))])
     c_aug = np.zeros(n + 1)
-    c_aug[-1] = 1  # Minimizar t
-    
-    # Resolver con linprog usando HiGHS para evitar warnings
-    from scipy.optimize import linprog
-    res = linprog(c_aug, A_eq=A_aug, b_eq=b, bounds=[(0, None)]*(n+1), method='highs')
-    
+    c_aug[-1] = 1  # Minimizar el valor de t
+
+    # Resolver el problema auxiliar con linprog
+    res = linprog(c_aug, A_eq=A_aug, b_eq=b, bounds=[(0, None)] * (n + 1), method='highs')
+
     if not res.success:
-        raise ValueError("Fase I falló. El problema puede ser infactible.")
-    
-    # Extraer x y t
+        raise ValueError("Fase I (robusta) falló. El problema puede ser no factible.")
+
+    # Extraer el punto factible
     x_feasible = res.x[:n]
     t = res.x[-1]
     
     if t > 1e-6:
-        print("Advertencia: El problema puede ser infactible (t =", t, ")")
-    
-    # Multiplicadores duales (lam) de las restricciones de igualdad
-    lam = res.eqlin.marginals  # Usar 'eqlin.marginals' en SciPy >=1.6.0
-    
-    # Holguras duales iniciales (s = c - A^T @ lam)
+        print(f"Advertencia: El problema puede ser no factible (t = {t:.2e})")
+
+    # Generar las holguras duales iniciales
+    lam = np.random.rand(m)
     s = np.maximum(c - A.T @ lam, 1e-6)  # Asegurar s > 0
-    
-    # Verificar que x y s sean positivos
-    # if not (np.all(x_feasible > 0) and np.all(s > 0)):
-    #     raise ValueError("El punto inicial no es factible o las holguras duales no son positivas.")
-    
+
     return x_feasible, lam, s
-    
-def primal_dual_interior_point(A, b, c, tol=1e-8, max_iter=100, mu_factor=0.1):
+
+
+
+def primal_dual_interior_point(A, b, c, tol=1e-8, max_iter=100, mu_factor=0.1, find_initial_point=None):
     x, lam, s = find_initial_point(A, b, c)
     m, n = A.shape
     history = {'mu': [], 'residual_primal': [], 'residual_dual': []}
@@ -90,3 +117,4 @@ def primal_dual_interior_point(A, b, c, tol=1e-8, max_iter=100, mu_factor=0.1):
         print(f"No convergió en {max_iter} iteraciones. Último μ: {mu:.3e}")
     
     return x, lam, s, history
+
