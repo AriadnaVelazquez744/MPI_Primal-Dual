@@ -6,11 +6,21 @@ import matplotlib.pyplot as plt
 
 def generate_random_lp(m, n):
     """
-    Genera un problema LP aleatorio de tamaño (m, n).
+    Genera un problema LP factible con A de rango completo y bien escalado.
     """
-    A = np.random.rand(m, n) * 10 - 5
-    b = np.random.rand(m) * 10
-    c = np.random.rand(n) * 10 - 5
+    # Generar A con rango completo
+    while True:
+        A = np.random.randn(m, n)
+        if np.linalg.matrix_rank(A) == m:
+            break
+    
+    # Generar x > 0 y calcular b = A @ x
+    x_true = np.abs(np.random.randn(n)) + 1.0  # x >= 1.0 para evitar valores cercanos a cero
+    b = A @ x_true
+    
+    # Vector de costo aleatorio
+    c = np.random.randn(n)
+    
     return A, b, c
 
 def compare_with_simplex(A, b, c):
@@ -46,5 +56,5 @@ def compare_with_simplex(A, b, c):
 
 if __name__ == "__main__":
     # Generar un problema aleatorio pequeño para probar
-    A, b, c = generate_random_lp(5, 10)
+    A, b, c = generate_random_lp(7, 10)
     compare_with_simplex(A, b, c)
