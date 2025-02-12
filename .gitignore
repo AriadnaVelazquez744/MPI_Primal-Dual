@@ -1,0 +1,11 @@
+# Entorno virtual 
+opt_models/
+
+# Archivos de instalación .whl
+instalaciones/
+
+# Archivos compilados de Python
+*.pyc
+__pycache__/
+
+
