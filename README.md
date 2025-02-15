@@ -1,6 +1,6 @@
 # 🔥 Implementación del Método de Puntos Interiores Primal-Dual en Python  
 
-📌 **Autores:** Ariadna Velázquez Rey y Lía Lópes Rosales
+📌 **Autores:** Ariadna Velázquez Rey y Lía López Rosales
 📌 **Repositorio:** [GitHub](https://github.com/AriadnaVelazquez744/MPI_Primal-Dual.git)  
 
 ---
