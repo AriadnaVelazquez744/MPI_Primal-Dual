@@ -1,22 +1,20 @@
 # primal_dual.py
 
 import numpy as np
-from numerical_utils import solve_newton_system, backtracking_line_search
-
-import numpy as np
+from numerical_utils import solve_newton_system, backtracking_line_search, scale_problem, compute_residuals
 from scipy.optimize import linprog
+import cvxpy as cp
 
-# Opción 1: Generación de punto inicial usando cvxpy
 def find_initial_point_cvxpy(A, b, c):
     import cvxpy as cp
     m, n = A.shape
 
-    # Definición de variables
+    # Variables
     x = cp.Variable(n)
     s = cp.Variable(n)
 
-    # Restricciones para asegurar x > 0, s > 0
-    constraints = [A @ x == b, x >= 1e-6, s >= 1e-6]
+    # Restricciones para asegurar que x > 1e-4 y s > 1e-4
+    constraints = [A @ x == b, x >= 1e-4, s >= 1e-4]
     objective = cp.Minimize(cp.sum(s))  # Minimizar suma de holguras
 
     # Resolver el problema
@@ -26,95 +24,55 @@ def find_initial_point_cvxpy(A, b, c):
     if prob.status != cp.OPTIMAL:
         raise ValueError("Fase I (cvxpy) falló. El problema puede ser no factible.")
 
-    # Generar punto inicial factible
+    # Generar valores iniciales
     lam = np.random.rand(m)
-    s = np.maximum(c - A.T @ lam, 1e-6)  # Holguras duales iniciales positivas
+    s = np.maximum(c - A.T @ lam, 1e-4)  # Evitar valores muy pequeños
 
     return x.value, lam, s
 
-# Opción 2: Generación de punto inicial sin cvxpy
-def find_initial_point_robust(A, b, c):
-    m, n = A.shape
 
-    # Fase I para encontrar un punto factible
-    A_aug = np.hstack([A, np.ones((m, 1))])
-    c_aug = np.zeros(n + 1)
-    c_aug[-1] = 1  # Minimizar el valor de t
-
-    # Resolver el problema auxiliar con linprog
-    res = linprog(c_aug, A_eq=A_aug, b_eq=b, bounds=[(0, None)] * (n + 1), method='highs')
-
-    if not res.success:
-        raise ValueError("Fase I (robusta) falló. El problema puede ser no factible.")
-
-    # Extraer el punto factible
-    x_feasible = res.x[:n]
-    t = res.x[-1]
+def primal_dual_interior_point(A, b, c, tol=1e-8, max_iter=100, mu_factor=0.125):
+    # Escalar el problema para evitar mal condicionamiento
+    A, b, c = scale_problem(A, b, c)
     
-    if t > 1e-6:
-        print(f"Advertencia: El problema puede ser no factible (t = {t:.2e})")
-
-    # Generar las holguras duales iniciales
-    lam = np.random.rand(m)
-    s = np.maximum(c - A.T @ lam, 1e-6)  # Asegurar s > 0
-
-    return x_feasible, lam, s
-
-
-
-def primal_dual_interior_point(A, b, c, tol=1e-8, max_iter=100, mu_factor=0.1, find_initial_point=None):
-    x, lam, s = find_initial_point(A, b, c)
+    # Obtener el punto inicial
+    x, lam, s = find_initial_point_cvxpy(A, b, c)
     m, n = A.shape
     history = {'mu': [], 'residual_primal': [], 'residual_dual': []}
     
     for it in range(max_iter):
+        # Calcular el parámetro de centralidad
         mu = np.dot(x, s) / n
         history['mu'].append(mu)
         
-        # Calcular residuales
-        residual_primal = np.linalg.norm(A @ x - b)
-        residual_dual = np.linalg.norm(A.T @ lam + s - c)
-        history['residual_primal'].append(residual_primal)
-        history['residual_dual'].append(residual_dual)
+        # Calcular los residuos
+        r_primal, r_dual, r_cent = compute_residuals(A, x, lam, s, b, c, mu)
+        history['residual_primal'].append(np.linalg.norm(r_primal))
+        history['residual_dual'].append(np.linalg.norm(r_dual))
         
         # Verificar convergencia
-        if mu < tol and residual_primal < tol and residual_dual < tol:
-            print(f"Convergencia en iteración {it}: μ = {mu:.3e}, residual_primal = {residual_primal:.3e}, residual_dual = {residual_dual:.3e}")
+        if mu < tol and np.linalg.norm(r_primal) < tol and np.linalg.norm(r_dual) < tol:
+            print(f"Convergencia en iteración {it}: μ = {mu:.3e}")
             break
         
-        # Resolver sistema de Newton
+        # Resolver sistema de Newton con la nueva función robusta
         dx, dlam, ds = solve_newton_system(A, x, lam, s, b, c, mu)
         
-        # Búsqueda de línea con backtracking mejorado
-        alpha = 1.0
-        max_backtrack = 50  # Aumentar el número máximo de intentos
-        for _ in range(max_backtrack):
-            x_new = x + alpha * dx
-            s_new = s + alpha * ds
-            if np.all(x_new > 0) and np.all(s_new > 0):
-                break
-            alpha *= 0.7  # Reducir el factor de reducción
-        else:
-            print("Búsqueda de línea fallida. Ajustando dirección de Newton.")
-            alpha = 0.0  # No actualizar variables
+        # Búsqueda de línea mejorada
+        alpha = backtracking_line_search(x, dx, s, ds)
         
-        # Actualizar variables
+        # Actualizar las variables
         x += alpha * dx
         lam += alpha * dlam
         s += alpha * ds
         
-        # Reducción de μ en cada iteración
-        mu *= 0.5  # Reducir μ en un factor constante
+        # Reducir el parámetro de centralidad μ
+        mu *= mu_factor
         
-        # Verificar convergencia
-        if mu < 1e-6 and residual_primal < 1e-6 and residual_dual < 1e-6:
-            print(f"Convergencia en iteración {it}: μ = {mu:.3e}, residual_primal = {residual_primal:.3e}, residual_dual = {residual_dual:.3e}")
-            break
-        
-        print(f"Iteración {it}: μ = {mu:.3e}, α = {alpha:.3f}, residual_primal = {residual_primal:.3e}, residual_dual = {residual_dual:.3e}")
+        # Imprimir progreso
+        print(f"Iteración {it}: μ = {mu:.3e}, α = {alpha:.3f}, Residuo primal = {np.linalg.norm(r_primal):.3e}, Residuo dual = {np.linalg.norm(r_dual):.3e}")
     
     else:
         print(f"No convergió en {max_iter} iteraciones. Último μ: {mu:.3e}")
     
     return x, lam, s, history
-

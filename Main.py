@@ -1,14 +1,11 @@
 # Main.py
 
 import numpy as np
-from primal_dual import primal_dual_interior_point, find_initial_point_cvxpy, find_initial_point_robust
+from primal_dual import primal_dual_interior_point
 from numerical_utils import scale_problem
 from scipy.optimize import linprog
 import time
 import matplotlib.pyplot as plt
-
-from network_flow import generate_network_flow_problem
-from transport_problem import generate_transport_problem
 
 
 def generate_random_lp(m, n):
@@ -48,29 +45,21 @@ def generate_large_random_lp(m, n):
     return A, b, c
 
 
-def compare_with_simplex(A, b, c, use_cvxpy=True):
+def compare_with_simplex(A, b, c):
     """
     Compara el algoritmo primal-dual con el método Simplex.
     """
     print("\n--- Comparación del Algoritmo Primal-Dual con Simplex ---")
 
-    # Elegir el método de punto inicial
-    if use_cvxpy:
-        print("Usando find_initial_point_cvxpy...")
-        find_initial_point = find_initial_point_cvxpy
-    else:
-        print("Usando find_initial_point_robust...")
-        find_initial_point = find_initial_point_robust
-
     # Algoritmo Primal-Dual
     start_time = time.time()
-    x_pd, lam_pd, s_pd, history = primal_dual_interior_point(A, b, c, find_initial_point=find_initial_point)
+    x_pd, lam_pd, s_pd, history = primal_dual_interior_point(A, b, c)
     primal_dual_time = time.time() - start_time
     print(f"Tiempo de ejecución (Primal-Dual): {primal_dual_time:.3f} segundos")
 
     # Método Simplex
     start_time = time.time()
-    res = linprog(c, A_eq=A, b_eq=b, method='simplex')
+    res = linprog(c, A_eq=A, b_eq=b, method='highs')
     simplex_time = time.time() - start_time
     print(f"Tiempo de ejecución (Simplex): {simplex_time:.3f} segundos")
 
@@ -91,14 +80,14 @@ def compare_with_simplex(A, b, c, use_cvxpy=True):
     print(f"Tiempo de ejecución (Primal-Dual): {primal_dual_time:.3f} segundos")
     print(f"Tiempo de ejecución (Simplex): {simplex_time:.3f} segundos")
 
-    # Visualización de la convergencia del parámetro μ
-    plt.figure(figsize=(10, 6))
-    plt.plot(history['mu'], label='Primal-Dual: μ vs Iteraciones')
-    plt.xlabel('Iteraciones')
-    plt.ylabel('Parámetro de barrera (μ)')
-    plt.title('Convergencia del Algoritmo Primal-Dual')
-    plt.legend()
-    plt.show()
+    # # Visualización de la convergencia del parámetro μ
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(history['mu'], label='Primal-Dual: μ vs Iteraciones')
+    # plt.xlabel('Iteraciones')
+    # plt.ylabel('Parámetro de barrera (μ)')
+    # plt.title('Convergencia del Algoritmo Primal-Dual')
+    # plt.legend()
+    # plt.show()
 
 
 
@@ -142,22 +131,11 @@ if __name__ == "__main__":
     # Generar un problema aleatorio pequeño para probar
     # A, b, c = generate_random_lp(7, 10)
     # A, b, c = generate_test_problem()
-    # A, b, c = generate_large_random_lp(50, 100)  # Problema de mayor tamaño (50 restricciones y 100 variables)
+    A, b, c = generate_large_random_lp(50, 100)  # Problema de mayor tamaño (50 restricciones y 100 variables)
     
-    # Cambiar el tipo de problema según lo que quieras probar
-    problem_type = "transport"  # Cambia a "network" para el problema de flujo de red
-    # problem_type = "network"  # Cambia a "transport" para el problema de transporte
-
-    if problem_type == "network":
-        A, b, c = generate_network_flow_problem()
-    elif problem_type == "transport":
-        A, b, c = generate_transport_problem()
-    else:
-        raise ValueError("Tipo de problema no válido. Elige 'network' o 'transport'.")
-
     A, b, c = scale_problem(A, b, c)  # Escalar el problema antes de resolverlo
 
-    compare_with_simplex(A, b, c, use_cvxpy=True)
+    compare_with_simplex(A, b, c)
 
 
 
