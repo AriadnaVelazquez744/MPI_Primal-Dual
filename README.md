@@ -104,8 +104,6 @@ donde **α** se obtiene mediante **búsqueda de línea** para garantizar que `x`
 │── 📄 Main.py                  # Código principal, genera problemas LP y ejecuta el algoritmo
 │── 📄 primal_dual.py            # Implementación del método primal-dual
 │── 📄 numerical_utils.py        # Funciones auxiliares (Newton, búsqueda de línea, escalado)
-│── 📄 transport_problem.py      # Generador de problemas de transporte
-│── 📄 network_flow.py           # Generador de problemas de flujo en redes
 │── 📄 README.md                 # Este archivo
 ```
 
