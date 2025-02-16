@@ -22,7 +22,10 @@ def solve_newton_system(A, x, lam, s, b, c, mu):
     X = np.diag(x)
     S = np.diag(s)
 
-    epsilon = 1e-4 * np.linalg.norm(A, ord=2)  # Regularización adaptativa
+    # epsilon = 1e-4 * np.linalg.norm(A, ord=2)  # Regularización adaptativa
+
+    epsilon = 1e-4 * np.linalg.norm(A, ord=2) + 1e-8  # Regularización adaptativa
+
 
     # Construcción de la matriz KKT
     KKT_top = np.hstack([np.zeros((n, n)), A.T, np.eye(n)])

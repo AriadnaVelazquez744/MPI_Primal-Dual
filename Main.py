@@ -59,17 +59,22 @@ def compare_with_simplex(A, b, c, use_cvxpy=True):
         print("Usando find_initial_point_robust...")
         find_initial_point = find_initial_point_robust
 
-    # Algoritmo Primal-Dual
-    start_time = time.time()
-    x_pd, lam_pd, s_pd, history = primal_dual_interior_point(A, b, c, find_initial_point=find_initial_point)
-    primal_dual_time = time.time() - start_time
-    print(f"Tiempo de ejecución (Primal-Dual): {primal_dual_time:.3f} segundos")
-
     # Método Simplex
     start_time = time.time()
     res = linprog(c, A_eq=A, b_eq=b, method='highs')
     simplex_time = time.time() - start_time
     print(f"Tiempo de ejecución (Simplex): {simplex_time:.3f} segundos")
+
+    # Verificar si Simplex encontró una solución
+    if res.x is None:
+        print(f"❌ Simplex no encontró una solución, x = {res.x}. Terminando el proceso.")
+        exit()  
+
+    # Algoritmo Primal-Dual
+    start_time = time.time()
+    x_pd, lam_pd, s_pd, history = primal_dual_interior_point(A, b, c, find_initial_point=find_initial_point)
+    primal_dual_time = time.time() - start_time
+    print(f"Tiempo de ejecución (Primal-Dual): {primal_dual_time:.3f} segundos")
 
     print("\nResultados:")
     print(f"Primal-Dual: x = {x_pd}")
@@ -147,7 +152,7 @@ if __name__ == "__main__":
     # Generar un problema aleatorio pequeño para probar
     # A, b, c = generate_random_lp(7, 10)
     # A, b, c = generate_test_problem()
-    A, b, c = generate_large_random_lp(4, 10)  # Problema de mayor tamaño (50 restricciones y 100 variables)
+    A, b, c = generate_large_random_lp(50, 100)  # Problema de mayor tamaño (50 restricciones y 100 variables)
     
     A, b, c = scale_problem(A, b, c)  # Escalar el problema antes de resolverlo
 

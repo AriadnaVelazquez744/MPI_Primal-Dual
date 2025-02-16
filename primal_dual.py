@@ -31,7 +31,7 @@ def find_initial_point_cvxpy(A, b, c):
     return x.value, lam, s
 
 
-def primal_dual_interior_point(A, b, c, tol=1e-8, max_iter=100, mu_factor=0.125, find_initial_point=None):
+def primal_dual_interior_point(A, b, c, tol=1e-10, max_iter=150, mu_factor=0.2, find_initial_point=None):
     # Escalar el problema para evitar mal condicionamiento
     A, b, c = scale_problem(A, b, c)
     
@@ -43,6 +43,9 @@ def primal_dual_interior_point(A, b, c, tol=1e-8, max_iter=100, mu_factor=0.125,
     x, lam, s = find_initial_point(A, b, c)
     m, n = A.shape
     history = {'mu': [], 'residual_primal': [], 'residual_dual': []}
+
+    if (m >= 30 or n >= 30):
+        max_iter = 400
     
     for it in range(max_iter):
         # Calcular el parámetro de centralidad
@@ -62,9 +65,23 @@ def primal_dual_interior_point(A, b, c, tol=1e-8, max_iter=100, mu_factor=0.125,
         # Resolver sistema de Newton con la nueva función robusta
         dx, dlam, ds = solve_newton_system(A, x, lam, s, b, c, mu)
         
-        # Búsqueda de línea mejorada
-        alpha = backtracking_line_search(x, dx, s, ds)
+        # # Búsqueda de línea mejorada
+        # alpha = backtracking_line_search(x, dx, s, ds)
         
+        # Búsqueda de línea mejorada
+        try:
+            alpha = backtracking_line_search(x, dx, s, ds)
+        except ValueError:
+            print("Búsqueda de línea fallida. Ajustando mu_factor...")
+            mu_factor = min(mu_factor * 1.5, 0.5)  # Aumentar hasta un límite para mayor estabilidad
+            continue  # Saltar a la siguiente iteración
+        
+        # Ajuste dinámico de mu_factor
+        if alpha < 1e-4:  # Si la búsqueda de línea es demasiado conservadora
+            mu_factor = min(mu_factor * 1.2, 0.5)  # Aumentar mu_factor para hacer el método más estable
+        elif np.linalg.norm(dx) < 1e-3:  # Si las actualizaciones de x son demasiado pequeñas
+            mu_factor = max(mu_factor * 0.8, 0.01)  # Reducir mu_factor para permitir cambios más agresivos
+
         # Actualizar las variables
         x += alpha * dx
         lam += alpha * dlam
@@ -79,6 +96,10 @@ def primal_dual_interior_point(A, b, c, tol=1e-8, max_iter=100, mu_factor=0.125,
     else:
         print(f"No convergió en {max_iter} iteraciones. Último μ: {mu:.3e}")
     
+    # CORTE DE CEROS DESPUÉS DE TERMINAR LAS ITERACIONES 
+    threshold = 1e-5  # Valores por debajo de 1e-5 se consideran 0
+    x[np.abs(x) < threshold] = 0.0  
+
     return x, lam, s, history
 
 
