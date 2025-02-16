@@ -45,7 +45,7 @@ def primal_dual_interior_point(A, b, c, tol=1e-10, max_iter=150, mu_factor=0.2, 
     history = {'mu': [], 'residual_primal': [], 'residual_dual': []}
 
     if (m >= 30 or n >= 30):
-        max_iter = 400
+        max_iter = 200
     
     for it in range(max_iter):
         # Calcular el parámetro de centralidad

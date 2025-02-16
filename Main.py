@@ -80,7 +80,7 @@ def compare_with_simplex(A, b, c, use_cvxpy=True):
     print(f"Primal-Dual: x = {x_pd}")
     print(f"Simplex: x = {res.x}")
 
-    # Comparación de tiempos de ejecución
+    # Comparación de tiempos de ejecución x
     methods = ['Primal-Dual', 'Simplex']
     times = [primal_dual_time, simplex_time]
 
@@ -93,7 +93,7 @@ def compare_with_simplex(A, b, c, use_cvxpy=True):
     # Gráfico de convergencia mejorado
     plt.figure(figsize=(12, 8))
 
-    # Evolución del parámetro de barrera μ en escala logarítmica
+    # Evolución del parámetro de barrera μ en escala logarítmica x
     plt.subplot(3, 1, 1)
     plt.plot(history['mu'], label='Parámetro de barrera (μ)', color='purple')
     plt.xlabel('Iteraciones')
@@ -102,7 +102,7 @@ def compare_with_simplex(A, b, c, use_cvxpy=True):
     plt.title('Convergencia del Algoritmo Primal-Dual')
     plt.legend()
 
-    # Evolución de los residuos primal y dual
+    # Evolución de los residuos primal y dual x
     plt.subplot(3, 1, 2)
     plt.plot(history['residual_primal'], label='Residuo Primal', color='blue')
     plt.plot(history['residual_dual'], label='Residuo Dual', color='red')
@@ -112,7 +112,7 @@ def compare_with_simplex(A, b, c, use_cvxpy=True):
     plt.title('Evolución de los Residuos')
     plt.legend()
 
-    # Comparación de soluciones (Primal-Dual vs Simplex)
+    # Comparación de soluciones (Primal-Dual vs Simplex) x
     plt.subplot(3, 1, 3)
     plt.bar(range(len(x_pd)), x_pd, alpha=0.7, label='Primal-Dual', color='blue')
     plt.bar(range(len(res.x)), res.x, alpha=0.7, label='Simplex', color='orange')
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     # Generar un problema aleatorio pequeño para probar
     # A, b, c = generate_random_lp(7, 10)
     # A, b, c = generate_test_problem()
-    A, b, c = generate_large_random_lp(50, 100)  # Problema de mayor tamaño (50 restricciones y 100 variables)
+    A, b, c = generate_large_random_lp(50, 50)  # Problema de mayor tamaño (50 restricciones y 100 variables)
     
     A, b, c = scale_problem(A, b, c)  # Escalar el problema antes de resolverlo
 
