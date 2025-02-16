@@ -1,0 +1,233 @@
+\documentclass{article}
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}          % Paquete principal para algoritmos
+\usepackage{algpseudocode}      % Para pseudocódigo (depende de algorithmicx)
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+% ¡Importante! hyperref debe ir al final de los paquetes:
+\usepackage{hyperref}
+
+\title{Implementación del Método de Puntos Interiores Primal-Dual para Programación Lineal}
+\author{Ariadna Velázquez Rey \and Lía López Rosales}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este documento presenta una implementación del método de puntos interiores primal-dual para resolver problemas de programación lineal. Se detalla el marco teórico del método, incluyendo su fundamentación matemática y las condiciones de optimalidad de Karush-Kuhn-Tucker (KKT). Además, se describe la implementación computacional, se comparan los resultados con el método Simplex. El código fuente está disponible en \url{https://github.com/AriadnaVelazquez744/MPI_Primal-Dual.git}.
+\end{abstract}
+
+\section{Introducción}
+Los métodos de puntos interiores han revolucionado la optimización lineal desde su introducción por Karmarkar en 1984. A diferencia del método Simplex que navega por los vértices del politopo factible, estos métodos siguen trayectorias en el interior de la región factible, ofreciendo complejidad polinomial. En este trabajo implementamos la variante primal-dual, considerada la más eficiente en la práctica.
+
+\section{Marco Teórico}
+
+\subsection{Formulación del Problema}
+Consideremos el problema de programación lineal en forma estándar:
+\begin{align*}
+\text{Minimizar} \quad & c^\top x \\
+\text{sujeto a} \quad & Ax = b \\
+& x \geq 0
+\end{align*}
+donde $x \in \mathbb{R}^n$, $A \in \mathbb{R}^{m \times n}$, $b \in \mathbb{R}^m$, y $c \in \mathbb{R}^n$.
+
+\subsection{Condiciones de Optimalidad de KKT}
+El lagrangiano asociado es:
+\[
+\mathcal{L}(x, \lambda, s) = c^\top x - \lambda^\top(Ax - b) - s^\top x
+\]
+Las condiciones KKT para optimalidad son:
+\begin{align*}
+\nabla_x \mathcal{L} &= c - A^\top \lambda - s = 0 \quad &\text{(Optimalidad)} \\
+Ax &= b \quad &\text{(Factibilidad primal)} \\
+x &\geq 0 \quad &\text{(Factibilidad dual)} \\
+x_i s_i &= 0,\ \forall i \quad &\text{(Complementariedad)}
+\end{align*}
+
+\subsection{Método de Barrera Logarítmica}
+Para evitar la condición de complementariedad estricta, introducimos un parámetro de barrera $\mu > 0$:
+\[
+x_i s_i = \mu,\ \forall i
+\]
+El sistema perturbado resulta:
+\[
+F(x, \lambda, s) = \begin{bmatrix}
+A^\top \lambda + s - c \\
+Ax - b \\
+XSe - \mu e
+\end{bmatrix} = 0
+\]
+donde $X = \text{diag}(x)$, $S = \text{diag}(s)$, y $e$ es el vector de unos.
+
+\subsection{Dirección de Newton}
+Aplicando el método de Newton al sistema perturbado, obtenemos:
+\[
+\begin{bmatrix}
+0 & A^\top & I \\
+A & 0 & 0 \\
+S & 0 & X
+\end{bmatrix}
+\begin{bmatrix}
+\Delta x \\
+\Delta \lambda \\
+\Delta s
+\end{bmatrix}
+=
+-
+\begin{bmatrix}
+A^\top \lambda + s - c \\
+Ax - b \\
+XSe - \mu e
+\end{bmatrix}
+\]
+La solución de este sistema proporciona la dirección de descenso.
+
+\subsection{Parámetro de Barrera y Longitud de Paso}
+El parámetro $\mu$ se actualiza en cada iteración mediante:
+\[
+\mu^{(k+1)} = \sigma \frac{(x^{(k)})^\top s^{(k)}}{n}
+\]
+donde $\sigma \in (0,1)$ es el parámetro de reducción. La longitud de paso $\alpha$ se determina mediante búsqueda lineal para mantener $x,s > 0$.
+
+\subsection{Convergencia del Método}
+La convergencia del método primal-dual se fundamenta en dos pilares esenciales: la \textbf{trayectoria central} y las \textbf{propiedades de autoconcordancia}. 
+
+\subsubsection{Trayectoria Central}
+Al introducir el parámetro $\mu > 0$, definimos la \textbf{trayectoria central} como el conjunto de puntos $(x(\mu), \lambda(\mu), s(\mu))$ que satisfacen:
+\[
+\begin{cases}
+A^\top \lambda + s = c \\
+Ax = b \\
+x_i s_i = \mu \quad \forall i \\
+x > 0, s > 0
+\end{cases}
+\]
+Cuando $\mu \to 0$, esta trayectoria converge al \textbf{punto óptimo estricto} del problema original. El método sigue aproximaciones sucesivas a esta trayectoria mediante:
+
+\begin{enumerate}
+\item \textbf{Predictor}: Dirección de Newton hacia $\mu=0$
+\item \textbf{Corrector}: Compensa la no linealidad de las condiciones de complementariedad
+\end{enumerate}
+
+\subsubsection{Análisis de Convergencia}
+Sea $\psi(x,s) = \|XSe - \mu e\|$ la medida de complementariedad. En cada iteración se cumple:
+\[
+\psi(x^+,s^+) \leq \beta \psi(x,s) \quad \text{con } 0 < \beta < 1
+\]
+Esto garantiza \textbf{convergencia lineal global} bajo las siguientes condiciones:
+\begin{itemize}
+\item Existencia de solución estrictamente factible (Teorema de Slater)
+\item Matriz $A$ de rango completo
+\item Selección de $\alpha$ que mantenga $x,s > 0$
+\end{itemize}
+
+\subsubsection{Propiedades del Paso de Newton}
+El sistema de Newton tiene solución única si y sólo si:
+\begin{itemize}
+\item El espacio nulo de $A$ no contiene vectores no triviales en el cono positivo
+\item Existe punto estrictamente factible (condición de interioridad)
+\end{itemize}
+Bajo estas condiciones, la matriz KKT es no singular y el paso de Newton está bien definido.
+
+\subsubsection{Selección del Parámetro $\sigma$}
+El parámetro $\sigma \in (0,1)$ en $\mu^{(k+1)} = \sigma \frac{x^\top s}{n}$ controla la tasa de reducción:
+\begin{itemize}
+\item $\sigma \to 1$: Avance lento, mejor seguimiento de la trayectoria central
+\item $\sigma \to 0$: Reducción agresiva de $\mu$, riesgo de inestabilidad
+\end{itemize}
+Un valor típico $\sigma = 0.1$ balancea velocidad y estabilidad.
+
+\subsubsection{Complejidad Computacional}
+Para un problema con $n$ variables y $m$ restricciones:
+\begin{itemize}
+\item Cada iteración requiere $\mathcal{O}((n+m)^3)$ operaciones (solución del sistema KKT)
+\item Número de iteraciones: $\mathcal{O}(\sqrt{n} \log(1/\epsilon))$ para precisión $\epsilon$
+\item Complejidad total: $\mathcal{O}((n+m)^{3.5} \log(1/\epsilon))$ 
+\end{itemize}
+Esto contrasta con el método Simplex que tiene complejidad exponencial en el peor caso.
+
+\subsection{Estabilidad Numérica}
+La presencia de elementos diagonales $X$ y $S$ en la matriz KKT introduce:
+\begin{itemize}
+\item \textbf{Escalamiento automático}: Mejora el número de condición de la matriz
+\item \textbf{Regularización implícita}: Evita singularidades cuando $\mu > 0$
+\end{itemize}
+No obstante, se requiere:
+\begin{itemize}
+\item Pivoteo en la factorización LU para evitar división por cero
+\item Estrategias de salvaguarda cuando $x_i$ o $s_i$ se acercan a cero
+\end{itemize}
+
+\subsection{Optimalidad de las Soluciones}
+El método produce soluciones $\epsilon$-óptimas en el sentido:
+\[
+c^\top x - b^\top \lambda \leq \epsilon(1 + |c^\top x| + |b^\top \lambda|)
+\]
+Esta cota se deriva directamente de la condición de complementariedad perturbada $XSe = \mu e$ y la dualidad lagrangiana.
+
+\section{Implementación del Algoritmo}
+
+\subsection{Esquema General}
+El algoritmo sigue estos pasos principales:
+\begin{enumerate}
+\item Inicialización: Encontrar punto inicial factible $(x^0, \lambda^0, s^0)$
+\item Iterar hasta convergencia:
+  \begin{itemize}
+  \item Calcular $\mu$ actual
+  \item Resolver sistema de Newton
+  \item Determinar longitud de paso $\alpha$
+  \item Actualizar variables $(x, \lambda, s)$
+  \end{itemize}
+\item Verificar criterios de parada
+\end{enumerate}
+
+\subsection{Detalles Computacionales}
+\begin{itemize}
+\item \textbf{Inicialización}: Utiliza CVXPY para encontrar punto inicial factible
+\item \textbf{Sistema Lineal}: Resuelto mediante factorización LU con pivoteo parcial
+\item \textbf{Búsqueda Lineal}: Implementa regla de Armijo con $\alpha_{\max} = 0.9995$
+\item \textbf{Criterio de Parada}: 
+\[
+\frac{\|Ax - b\|}{1 + \|b\|} \leq \epsilon \quad \text{y} \quad \frac{\|A^\top \lambda + s - c\|}{1 + \|c\|} \leq \epsilon
+\]
+\end{itemize}
+
+\section{Resultados Numéricos}
+
+\subsection{Comparación con Simplex}
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Método & Tiempo (s) & Error \\
+\midrule
+Primal-Dual & 0.118 & $10^{-6}$ \\
+Simplex (HiGHS) & 0.023 & $10^{-16}$ \\
+\bottomrule
+\end{tabular}
+\caption{Comparación de rendimiento en problema de transporte 10×10}
+\end{table}
+
+\section{Conclusiones y Trabajo Futuro}
+La implementación demuestra la viabilidad del método primal-dual, mostrando:
+\begin{itemize}
+\item Ventajas en problemas grandes por complejidad polinomial
+\item Sensibilidad a la selección de parámetros ($\sigma$, $\alpha$)
+\item Dependencia de buenas inicializaciones
+\end{itemize}
+
+Líneas futuras incluyen:
+\begin{itemize}
+\item Implementación de estrategias predictor-corrector
+\item Técnicas de regularización para matrices mal condicionadas
+\item Paralelización del solver lineal
+\end{itemize}
+
+\end{document}
