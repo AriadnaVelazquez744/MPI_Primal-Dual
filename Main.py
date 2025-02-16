@@ -1,7 +1,7 @@
 # Main.py
 
 import numpy as np
-from primal_dual import primal_dual_interior_point, find_initial_point_cvxpy, find_initial_point_robust
+from primal_dual import primal_dual_interior_point
 from numerical_utils import scale_problem
 from scipy.optimize import linprog
 import time
@@ -45,19 +45,11 @@ def generate_large_random_lp(m, n):
     return A, b, c
 
 
-def compare_with_simplex(A, b, c, use_cvxpy=True):
+def compare_with_simplex(A, b, c):
     """
     Compara el algoritmo primal-dual con el método Simplex.
     """
     print("\n--- Comparación del Algoritmo Primal-Dual con Simplex ---")
-
-    # Elegir el método de punto inicial
-    if use_cvxpy:
-        print("Usando find_initial_point_cvxpy...")
-        find_initial_point = find_initial_point_cvxpy
-    else:
-        print("Usando find_initial_point_robust...")
-        find_initial_point = find_initial_point_robust
 
     # Método Simplex
     start_time = time.time()
@@ -72,7 +64,7 @@ def compare_with_simplex(A, b, c, use_cvxpy=True):
 
     # Algoritmo Primal-Dual
     start_time = time.time()
-    x_pd, lam_pd, s_pd, history = primal_dual_interior_point(A, b, c, find_initial_point=find_initial_point)
+    x_pd, lam_pd, s_pd, history = primal_dual_interior_point(A, b, c)
     primal_dual_time = time.time() - start_time
     print(f"Tiempo de ejecución (Primal-Dual): {primal_dual_time:.3f} segundos")
 

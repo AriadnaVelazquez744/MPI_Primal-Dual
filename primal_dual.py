@@ -31,16 +31,12 @@ def find_initial_point_cvxpy(A, b, c):
     return x.value, lam, s
 
 
-def primal_dual_interior_point(A, b, c, tol=1e-10, max_iter=150, mu_factor=0.2, find_initial_point=None):
+def primal_dual_interior_point(A, b, c, tol=1e-10, max_iter=150, mu_factor=0.2):
     # Escalar el problema para evitar mal condicionamiento
     A, b, c = scale_problem(A, b, c)
     
-    # Si no se proporciona un método, usar CVXPY por defecto
-    if find_initial_point is None:
-        find_initial_point = find_initial_point_cvxpy
-
     # Obtener el punto inicial
-    x, lam, s = find_initial_point(A, b, c)
+    x, lam, s = find_initial_point_cvxpy(A, b, c)
     m, n = A.shape
     history = {'mu': [], 'residual_primal': [], 'residual_dual': []}
 
@@ -64,9 +60,6 @@ def primal_dual_interior_point(A, b, c, tol=1e-10, max_iter=150, mu_factor=0.2, 
         
         # Resolver sistema de Newton con la nueva función robusta
         dx, dlam, ds = solve_newton_system(A, x, lam, s, b, c, mu)
-        
-        # # Búsqueda de línea mejorada
-        # alpha = backtracking_line_search(x, dx, s, ds)
         
         # Búsqueda de línea mejorada
         try:
@@ -101,17 +94,3 @@ def primal_dual_interior_point(A, b, c, tol=1e-10, max_iter=150, mu_factor=0.2, 
     x[np.abs(x) < threshold] = 0.0  
 
     return x, lam, s, history
-
-
-def find_initial_point_robust(A, b, c):
-    """
-    Método alternativo para encontrar un punto inicial sin usar CVXPY.
-    """
-    m, n = A.shape
-
-    # Punto inicial factible
-    x0 = np.abs(np.random.rand(n)) + 0.1  # Asegurar x >= 0.1
-    lam0 = np.random.rand(m)
-    s0 = np.maximum(c - A.T @ lam0, 0.1)  # Asegurar s >= 0.1
-
-    return x0, lam0, s0
