@@ -57,7 +57,7 @@ def solve_newton_system(A, x, lam, s, b, c, mu):
 
 
 
-def backtracking_line_search(x, dx, s, ds, alpha=1.0, beta=0.7, min_alpha=1e-10):
+def backtracking_line_search(x, dx, s, ds, alpha=0.1, beta=0.7, min_alpha=1e-10):
     """
     Búsqueda de línea robusta para asegurar que x y s permanezcan positivos.
     """

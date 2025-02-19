@@ -62,6 +62,7 @@ def compare_with_simplex(A, b, c):
         print(f"❌ Simplex no encontró una solución, x = {res.x}. Terminando el proceso.")
         exit()  
 
+
     # Algoritmo Primal-Dual
     start_time = time.time()
     x_pd, lam_pd, s_pd, history = primal_dual_interior_point(A, b, c)
@@ -73,14 +74,14 @@ def compare_with_simplex(A, b, c):
     print(f"Simplex: x = {res.x}")
 
     # Comparación de tiempos de ejecución x
-    methods = ['Primal-Dual', 'Simplex']
-    times = [primal_dual_time, simplex_time]
+    # methods = ['Primal-Dual', 'Simplex']
+    # times = [primal_dual_time, simplex_time]
 
-    plt.figure(figsize=(8, 5))
-    plt.bar(methods, times, color=['blue', 'orange'])
-    plt.ylabel('Tiempo de ejecución (s)')
-    plt.title('Comparación de Tiempo de Ejecución')
-    plt.show()
+    # plt.figure(figsize=(8, 5))
+    # plt.bar(methods, times, color=['blue', 'orange'])
+    # plt.ylabel('Tiempo de ejecución (s)')
+    # plt.title('Comparación de Tiempo de Ejecución')
+    # plt.show()
 
     # Gráfico de convergencia mejorado
     plt.figure(figsize=(12, 8))
@@ -127,6 +128,18 @@ def compare_with_simplex(A, b, c):
     plt.legend()
 
     plt.show()
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(history['norm_dx'], label='||Δx||', color='blue')
+    plt.plot(history['norm_dlam'], label='||Δλ||', color='red')
+    plt.plot(history['norm_ds'], label='||Δs||', color='green')
+    plt.xlabel('Iteraciones')
+    plt.ylabel('Norma')
+    plt.yscale('log')  # Escala logarítmica para mejor visualización
+    plt.title('Evolución del Gradiente de la Dirección de Descenso')
+    plt.legend()
+    plt.show()
+
 
 
 def generate_test_problem():

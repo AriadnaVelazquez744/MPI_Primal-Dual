@@ -32,13 +32,14 @@ def find_initial_point_cvxpy(A, b, c):
 
 
 def primal_dual_interior_point(A, b, c, tol=1e-10, max_iter=150, mu_factor=0.2):
+    
     # Escalar el problema para evitar mal condicionamiento
     A, b, c = scale_problem(A, b, c)
     
     # Obtener el punto inicial
     x, lam, s = find_initial_point_cvxpy(A, b, c)
     m, n = A.shape
-    history = {'mu': [], 'residual_primal': [], 'residual_dual': []}
+    history = {'mu': [], 'residual_primal': [], 'residual_dual': [], 'norm_dx': [], 'norm_dlam': [], 'norm_ds': []}
 
     if (m >= 30 or n >= 30):
         max_iter = 200
@@ -61,6 +62,11 @@ def primal_dual_interior_point(A, b, c, tol=1e-10, max_iter=150, mu_factor=0.2):
         # Resolver sistema de Newton con la nueva función robusta
         dx, dlam, ds = solve_newton_system(A, x, lam, s, b, c, mu)
         
+        # Guardar las normas de las direcciones de descenso
+        history['norm_dx'].append(np.linalg.norm(dx))
+        history['norm_dlam'].append(np.linalg.norm(dlam))
+        history['norm_ds'].append(np.linalg.norm(ds))
+
         # Búsqueda de línea mejorada
         try:
             alpha = backtracking_line_search(x, dx, s, ds)
@@ -84,7 +90,7 @@ def primal_dual_interior_point(A, b, c, tol=1e-10, max_iter=150, mu_factor=0.2):
         mu *= mu_factor
         
         # Imprimir progreso
-        print(f"Iteración {it}: μ = {mu:.3e}, α = {alpha:.3f}, Residuo primal = {np.linalg.norm(r_primal):.3e}, Residuo dual = {np.linalg.norm(r_dual):.3e}")
+        # print(f"Iteración {it}: μ = {mu:.3e}, α = {alpha:.3f}, Residuo primal = {np.linalg.norm(r_primal):.3e}, Residuo dual = {np.linalg.norm(r_dual):.3e}")
     
     else:
         print(f"No convergió en {max_iter} iteraciones. Último μ: {mu:.3e}")
